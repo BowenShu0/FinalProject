@@ -2,6 +2,7 @@ package com.example.eep523_hw3
 
 import android.os.AsyncTask
 import android.os.Bundle
+import android.util.Log
 import android.view.View
 import android.widget.Button
 import android.widget.EditText
@@ -19,6 +20,7 @@ class MainActivity : AppCompatActivity() {
     private lateinit var editText: EditText
     private lateinit var submitButton: Button
     private lateinit var errorTextView: TextView
+    private lateinit var mainContainer: RelativeLayout
     private val defaultText = "Seattle,US"
 
     // Variables for city and API key
@@ -33,6 +35,7 @@ class MainActivity : AppCompatActivity() {
         editText = findViewById(R.id.inputCity)
         submitButton = findViewById(R.id.submitButton)
         errorTextView = findViewById(R.id.errorText)
+        mainContainer = findViewById(R.id.container)
 
         // Set the default text in the EditText
         editText.setText(defaultText)
@@ -121,6 +124,10 @@ class MainActivity : AppCompatActivity() {
                 findViewById<TextView>(R.id.pressure).text = pressure
                 findViewById<TextView>(R.id.humidity).text = humidity
 
+                // Change the background based on weather description
+                Log.d("WeatherApp", "Weather Description: $weatherDescription")
+                changeBackground(weatherDescription)
+
                 // Hide the loader and show the main container
                 findViewById<ProgressBar>(R.id.loader).visibility = View.GONE
                 findViewById<RelativeLayout>(R.id.mainContainer).visibility = View.VISIBLE
@@ -130,6 +137,36 @@ class MainActivity : AppCompatActivity() {
                 findViewById<ProgressBar>(R.id.loader).visibility = View.GONE
                 errorTextView.text = "Error: ${e.message}"
                 errorTextView.visibility = View.VISIBLE
+            }
+        }
+
+        // Method to change the background based on weather description
+        private fun changeBackground(description: String) {
+            when {
+                description.contains("clear", true) -> {
+                    mainContainer.setBackgroundResource(R.drawable.clear_sky)
+                    Log.d("WeatherApp", "Background changed to clear_sky")
+                }
+                description.contains("clouds", true) -> {
+                    mainContainer.setBackgroundResource(R.drawable.cloudy_sky)
+                    Log.d("WeatherApp", "Background changed to few_clouds")
+                }
+                description.contains("rain", true) -> {
+                    mainContainer.setBackgroundResource(R.drawable.rainy_sky)
+                    Log.d("WeatherApp", "Background changed to rain")
+                }
+                description.contains("thunderstorm", true) -> {
+                    mainContainer.setBackgroundResource(R.drawable.thunder_sky)
+                    Log.d("WeatherApp", "Background changed to thunderstorm")
+                }
+                description.contains("snow", true) -> {
+                    mainContainer.setBackgroundResource(R.drawable.snow_sky)
+                    Log.d("WeatherApp", "Background changed to snow")
+                }
+                else -> {
+                    mainContainer.setBackgroundResource(R.drawable.gradient_bg)
+                    Log.d("WeatherApp", "Background changed to default_bg")
+                }
             }
         }
     }
