@@ -15,6 +15,14 @@ import java.net.URL
 import java.text.SimpleDateFormat
 import java.util.*
 
+import android.Manifest
+import android.content.pm.PackageManager
+import android.location.Location
+import android.location.LocationListener
+import android.location.LocationManager
+import androidx.core.app.ActivityCompat
+import androidx.core.content.ContextCompat
+
 class MainActivity : AppCompatActivity() {
     // Declare views and default text
     private lateinit var editText: EditText
@@ -26,6 +34,8 @@ class MainActivity : AppCompatActivity() {
     // Variables for city and API key
     private var CITY: String = defaultText
     private val API: String = "e52aba36fa999284a53cfc3f91919c3f"
+    private lateinit var locationManager: LocationManager
+    private val locationPermissionCode = 2
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -38,7 +48,7 @@ class MainActivity : AppCompatActivity() {
         mainContainer = findViewById(R.id.container)
 
         // Set the default text in the EditText
-        editText.setText(defaultText)
+//        editText.setText(defaultText)
 
         // Set a click listener for the submit button
         submitButton.setOnClickListener {
@@ -52,8 +62,49 @@ class MainActivity : AppCompatActivity() {
             weatherTask().execute()
         }
 
-        // Execute the weather task on initial load
-        weatherTask().execute()
+        // Get location on initial load
+        getLocation()
+    }
+
+    // Method to request location updates
+    private fun getLocation() {
+        locationManager = getSystemService(LOCATION_SERVICE) as LocationManager
+
+        // Check if location permissions are granted
+        if (ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
+            // Request location permissions if not granted
+            ActivityCompat.requestPermissions(this, arrayOf(Manifest.permission.ACCESS_FINE_LOCATION), locationPermissionCode)
+        } else {
+            // Request location updates if permissions are granted
+            locationManager.requestLocationUpdates(LocationManager.GPS_PROVIDER, 5000, 5f, object : LocationListener {
+                override fun onLocationChanged(location: Location) {
+                    // Get latitude and longitude from location
+                    val latitude = location.latitude
+                    val longitude = location.longitude
+                    CITY = "$latitude,$longitude"
+                    // Execute the weather task to update weather information
+                    weatherTask().execute()
+                    // Remove location updates after getting the location
+                    locationManager.removeUpdates(this)
+                }
+
+                override fun onStatusChanged(provider: String?, status: Int, extras: Bundle?) {}
+
+                override fun onProviderEnabled(provider: String) {}
+
+                override fun onProviderDisabled(provider: String) {}
+            })
+        }
+    }
+
+    // Handle the result of location permission request
+    override fun onRequestPermissionsResult(requestCode: Int, permissions: Array<out String>, grantResults: IntArray) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults)
+        if (requestCode == locationPermissionCode) {
+            if (grantResults.isNotEmpty() && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
+                getLocation()
+            }
+        }
     }
 
     // Inner class to handle the asynchronous task of fetching weather data
@@ -70,9 +121,15 @@ class MainActivity : AppCompatActivity() {
         override fun doInBackground(vararg params: String?): String? {
             var response: String?
             try {
-                response = URL("https://api.openweathermap.org/data/2.5/weather?q=$CITY&units=metric&appid=$API").readText(
-                    Charsets.UTF_8
-                )
+                // Construct the API URL with the city or coordinates
+                val url = if (CITY.contains(",")) {
+                    // Coordinates are being used
+                    "https://api.openweathermap.org/data/2.5/weather?lat=${CITY.split(",")[0]}&lon=${CITY.split(",")[1]}&units=metric&appid=$API"
+                } else {
+                    // City name is being used
+                    "https://api.openweathermap.org/data/2.5/weather?q=$CITY&units=metric&appid=$API"
+                }
+                response = URL(url).readText(Charsets.UTF_8)
             } catch (e: Exception) {
                 response = null
             }
@@ -135,7 +192,7 @@ class MainActivity : AppCompatActivity() {
             } catch (e: Exception) {
                 // In case of an error, hide the loader and show the error text below the input field
                 findViewById<ProgressBar>(R.id.loader).visibility = View.GONE
-                errorTextView.text = "Error: ${e.message}"
+                errorTextView.text = "Error: ${e.message}. Please check the city name or try again later."
                 errorTextView.visibility = View.VISIBLE
             }
         }
@@ -170,4 +227,5 @@ class MainActivity : AppCompatActivity() {
             }
         }
     }
+
 }
